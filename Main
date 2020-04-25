@@ -1,0 +1,4 @@
+import crawl
+import threading
+
+print(crawl.findstr(['https://www.wikipedia.org/'],3,'the'))
