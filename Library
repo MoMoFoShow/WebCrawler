@@ -1,0 +1,41 @@
+import requests
+import re
+
+def fetch(url):
+    try:
+        response = requests.get(url) 
+    except Exception as exception:
+        print(exception)
+        return
+    
+    data = requests.get(url)
+    return data.content # data is a requests.response object
+
+def geturls(url):
+    data = fetch(url)
+    matches = re.findall(r'href=(\".*?\")',str(data))
+    return matches
+
+def findstr(urllist,levels,string):
+    if type(urllist) != list:
+        print('findstr usage: function requires parameters URL list, Levels integer, String to search for')
+        return
+    if levels <= 0:
+        return 
+    
+    hits = []
+    nexturls = []
+    for i in urllist:
+        if len(re.findall(bytes(string,'utf-8'),fetch(i))) > 0:
+            hits.append(i)
+        future = geturls(urllist)
+        if future != None:
+            nexturls.extend(future)
+        if nexturls != None:
+            nexturls = list(set(nexturls))
+    levels = levels-1
+    for i in nexturls:
+        hits.extend(findstr(nexturls,levels,string))
+    return hits
+        
+    
