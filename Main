@@ -1,4 +1,9 @@
 import crawl
-import threading
-
-print(crawl.findstr(['https://www.wikipedia.org/'],3,'the'))
+import time
+start = float(time.time())
+crawled = crawl.findstr(['https://www.bookfart.com'],3,'the')
+print(len(crawled), 'hits found:')
+print(crawled)
+end = float(time.time())
+print('The process completed in',(int(end-start)),'seconds')
+print(fetchnum)
