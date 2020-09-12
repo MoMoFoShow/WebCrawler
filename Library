@@ -1,6 +1,7 @@
 import requests
 import re
 import concurrent.futures
+import time
 
 crawllog = 'crawl' + str(int(time.time())) + '.log'
 logfile = open(crawllog, 'w')
