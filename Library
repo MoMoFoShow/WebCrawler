@@ -1,19 +1,29 @@
 import requests
 import re
+import concurrent.futures
 
-def fetch(url):
+crawllog = 'crawl' + str(int(time.time())) + '.log'
+logfile = open(crawllog, 'w')
+def fetch(url, timeout):
     try:
-        response = requests.get(url) 
+        data = requests.get(url, timeout = timeout)
     except Exception as exception:
-        print(exception)
+        print(exception + ' ' + url)
+        logfile.write(exception + ' ' + url)
         return
-    
-    data = requests.get(url)
-    return data.content # data is a requests.response object
+    try:
+        information = data.content.decode('utf-8')
+    except Exception as e:
+        print('\t',e)
+        logfile.write(e)
+        return
+    print('fetching',url)
+    logfile.write('fetched' + ' ' + url)
+    #fetchnum = fetchnum + 1
+    return information # data is a requests.response object
 
-def geturls(url):
-    data = fetch(url)
-    matches = re.findall(r'href=(\".*?\")',str(data))
+def geturls(info):
+    matches = re.findall(r'href=\"(http.*?)\"',info)
     return matches
 
 def findstr(urllist,levels,string):
@@ -21,21 +31,33 @@ def findstr(urllist,levels,string):
         print('findstr usage: function requires parameters URL list, Levels integer, String to search for')
         return
     if levels <= 0:
-        return 
-    
+        return []
     hits = []
     nexturls = []
-    for i in urllist:
-        if len(re.findall(bytes(string,'utf-8'),fetch(i))) > 0:
-            hits.append(i)
-        future = geturls(urllist)
-        if future != None:
-            nexturls.extend(future)
-        if nexturls != None:
-            nexturls = list(set(nexturls))
+    with concurrent.futures.ThreadPoolExecutor(max_workers=40) as executor:
+        future_to_url = {executor.submit(fetch, url, 5): url for url in urllist}
+        for i in concurrent.futures.as_completed(future_to_url):
+            url = future_to_url[i]
+            try:
+                datatry = str(i.result())
+            except Exception as exc:
+                print('%r generated an exception: %s' % (url, exc))
+                logfile.write('%r generated an exception: %s' % (url, exc))
+            else:
+                compiledstr = re.compile(string)
+                if datatry == None:
+                    continue
+                if len(re.findall(r'html', datatry, re.IGNORECASE)) == 0:
+                    continue
+                found = re.findall(r'\b' + compiledstr.pattern + r'\b', datatry)
+                if len(found) > 0:
+                    hits.append(i)
+                future = geturls(datatry)
+                # ~~~~~~~~~~~~~~~~~~~~
+                if future != None:
+                    nexturls.extend(future)
+                if nexturls != None:
+                    nexturls = list(set(nexturls))
     levels = levels-1
-    for i in nexturls:
-        hits.extend(findstr(nexturls,levels,string))
+    hits.extend(findstr(nexturls,levels,string))
     return hits
-        
-    
